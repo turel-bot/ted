@@ -1,0 +1,9 @@
+node_modules
+dist
+config.json
+.env
+prisma/dev.db
+prisma/*.db
+
+# I (ace) use this file for sum general testing.
+f.ts

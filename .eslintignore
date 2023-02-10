@@ -1,0 +1,10 @@
+node_modules
+dist
+builds
+examples
+jest.config.ts
+docs
+logos/**
+
+# this is the file I (ace) use for sum general testing.
+f.ts
