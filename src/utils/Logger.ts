@@ -48,7 +48,7 @@ class Logger
      * @param {string} msg - The message to format. 
      * @returns {string} The formatted message.
      */
-    public format(level: [string, string], msg: string): string // level -> [type, color]
+    public format(level: [string, keyof Chalk], msg: string): string // level -> [type, color]
     {
         // first char uppercased + the rest of the string
         // EX: blue -> Blue
