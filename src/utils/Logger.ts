@@ -1,4 +1,5 @@
 /** Singleton Logger */
+import type { Chalk } from 'chalk';
 import chalk from 'chalk';
 
 /** @private @description The singleton instance of the Logger. */
@@ -56,9 +57,8 @@ class Logger
         //            fist char uppercased        rest of string
         const color = level[1][0].toUpperCase() + level[1].slice(1);
 
-        // @ts-expect-error this is marked as an error cause a string cannot index the ChalkInstance type. I DONT CARE.
         // + this is completely unsafe, but i dont care! dont be an idiot and pass bullshit to it!
-        const colorFunc = chalk['bg' + color] as (m: string) => void;
+        const colorFunc = chalk[`bg${color}` as keyof Chalk] as (m: string) => void;
 
         return `${ chalk.cyan(colorFunc(this.fetchStupidBrackets(level[0]) + ': ' + msg)) }`;
     }
