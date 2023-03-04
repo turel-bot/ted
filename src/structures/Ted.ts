@@ -1,4 +1,5 @@
 import type { ClientOptions, RESTPostAPIChatInputApplicationCommandsJSONBody, ApplicationCommandDataResolvable, Awaitable, ClientEvents, Interaction } from 'discord.js';
+import type AllPossibleMetadata from '../annotations/AllPossibleMetadata.type';
 import { Routes, Collection, Client } from 'discord.js';
 import { lstatSync, readdirSync } from 'fs';
 import Logger from '../utils/Logger';
@@ -35,7 +36,7 @@ class Ted extends Client
     /** @description Should we use Ted's built in command handler? @todo RENAME */
     private shouldWeUseTedCommandHandler: boolean = true;
     /** @description map of name to method & metadata */
-    private readonly commands: Collection<string, { method: (...args: any[]) => any | Promise<any>, raw: RESTPostAPIChatInputApplicationCommandsJSONBody; }> = new Collection();
+    private readonly commands: Collection<string, { method: (...args: any[]) => any | Promise<any>, metadata: AllPossibleMetadata; }> = new Collection();
 
     public constructor(opts: TedOptions)
     {
@@ -75,13 +76,14 @@ class Ted extends Client
 
         for(let i: number = 0; i < methods.length; i++)
         {
-            const metadata: RESTPostAPIChatInputApplicationCommandsJSONBody = Reflect.getMetadata('ted::command', cassth[methods[i]] as (...args: any[]) => any);
-            this.commands.set(metadata.name, { method: cassth[methods[i]], raw: metadata });
+            const commandMetadata: RESTPostAPIChatInputApplicationCommandsJSONBody = Reflect.getMetadata('ted::command', cassth[methods[i]] as (...args: any[]) => any);
+            const commandPermissions = Reflect.getMetadata('ted::command:permission', cassth[methods[i]] as (...args: any[]) => any);
+            this.commands.set(commandMetadata.name, { method: cassth[methods[i]], metadata: { command: commandMetadata, permissions: commandPermissions || undefined } });
 
             if(this.debug)
             {
-                Logger.getInstance().info(`Registered command ${ metadata.name }`);
-                this.emit('debug', `Registered command ${ metadata.name }`);
+                Logger.getInstance().info(`Registered command ${ commandMetadata.name }`);
+                this.emit('debug', `Registered command ${ commandMetadata.name }`);
             }
         }
     }
@@ -128,14 +130,14 @@ class Ted extends Client
 
         this.commands?.forEach(async (val) =>
         {
-            const { raw: metadata } = val;
+            const { metadata } = val;
 
             const isOkayJSON: boolean = this.isJson(metadata);
 
             if(isOkayJSON)
                 JSONCommands.push(metadata);
             else
-                throw new Error('Invalid JSON was provided when parsing commands\nName: ' + metadata.name);
+                throw new Error('Invalid JSON was provided when parsing commands\nName: ' + metadata.command.name);
         });
 
         if(opts.global === false || typeof opts.global === undefined)
@@ -160,7 +162,8 @@ class Ted extends Client
         if(!this.shouldWeUseTedCommandHandler)
             return;
 
-        super.on('interactionCreate', (interaction: Interaction) =>
+        // super in order to skip past our implementation of #on
+        super.on('interactionCreate', async (interaction: Interaction) =>
         {
             if(!interaction.isChatInputCommand())
             {
@@ -168,20 +171,29 @@ class Ted extends Client
                 return;
             }
 
-            const command:
-                { method: (...args: any[]) => any | Promise<any>, raw: RESTPostAPIChatInputApplicationCommandsJSONBody; } | undefined
-                = this.commands?.get(interaction.commandName);
+            const command = this.commands?.get(interaction.commandName);
 
             if(!command)
                 return;
 
+            if(command.metadata.permissions && command.metadata.permissions.permission !== 'NONE' && interaction.guild !== null)
+            {
+                if(!interaction.memberPermissions?.has(command.metadata.permissions.permission))
+                {
+                    // IE: PermissionName -> Permission Name
+                    const enUSPermissionName = command.metadata.permissions.permission.replace(/([A-Z])/g, ' $1').trim();
+                    await interaction.reply(command.metadata.permissions.message.replace('%s', enUSPermissionName));
+                    return;
+                }
+            }
+
             try
             {
-                command.method.call(this, interaction);
+                await command.method.call(this, interaction);
             }
             catch(err: unknown)
             {
-                console.warn(`Failed to execute command ${ command.raw.name }.\nError: ${ err }`);
+                console.warn(`Failed to execute command ${ command.metadata.command.name }.\nError: ${ err }`);
             }
         });
     }
