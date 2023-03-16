@@ -76,7 +76,10 @@ class Ted extends Client
 
         for(let i: number = 0; i < methods.length; i++)
         {
-            const commandMetadata: RESTPostAPIChatInputApplicationCommandsJSONBody = Reflect.getMetadata('ted::command', cassth[methods[i]] as (...args: any[]) => any);
+            const commandMetadata: RESTPostAPIChatInputApplicationCommandsJSONBody | undefined = Reflect.getMetadata('ted::command', cassth[methods[i]] as (...args: any[]) => any);
+            if(!commandMetadata || typeof commandMetadata === 'undefined')
+                continue; // skip if there isnt any metadata
+            
             const commandPermissions = Reflect.getMetadata('ted::command:permission', cassth[methods[i]] as (...args: any[]) => any);
             this.commands.set(commandMetadata.name, { method: cassth[methods[i]], metadata: { command: commandMetadata, permissions: commandPermissions || undefined } });
 
