@@ -27,6 +27,7 @@
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "allowJs": true,
+    "importHelpers": true,
     "baseUrl": ".",
     "paths": {
       "src": [
