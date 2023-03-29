@@ -1,13 +1,17 @@
-import type { ClientOptions, RESTPostAPIChatInputApplicationCommandsJSONBody, ApplicationCommandDataResolvable, Awaitable, ClientEvents, Interaction } from 'discord.js';
+import type { ClientOptions, ApplicationCommandDataResolvable, Awaitable, ClientEvents, Interaction } from 'discord.js';
 import type AllPossibleMetadata from '../annotations/AllPossibleMetadata.type';
+import type { CommandData } from 'src/annotations/Command';
 import { Routes, Collection, Client } from 'discord.js';
 import { lstatSync, readdirSync } from 'fs';
-import Logger from '../utils/Logger';
 import Log from '../annotations/Log';
 
 interface TedOptions extends ClientOptions
 {
-    /** @description Should we enable debugging logs? */
+    /** 
+     * @description Should we enable debugging logs? 
+     * @deprecated Please just listen to 'debug'
+     * @since 0.0.2
+     */
     debug?: boolean;
     /** @description Should the bot be displayed as being on mobile? */
     mobile?: boolean;
@@ -24,6 +28,9 @@ interface TedClientEvents extends ClientEvents
     tedInteractionCreate: [interaction: Interaction];
 }
 
+/**
+ * @description 
+ */
 class Ted extends Client
 {
     /** 
@@ -36,7 +43,10 @@ class Ted extends Client
     /** @description Should we use Ted's built in command handler? @todo RENAME */
     private shouldWeUseTedCommandHandler: boolean = true;
     /** @description map of name to method & metadata */
-    private readonly commands: Collection<string, { method: (...args: any[]) => any | Promise<any>, metadata: AllPossibleMetadata; }> = new Collection();
+    private readonly commands: Collection<string, {
+        method: (...args: any[]) => any | Promise<any>;
+        metadata: AllPossibleMetadata;
+    }> = new Collection();
 
     public constructor(opts: TedOptions)
     {
@@ -71,23 +81,18 @@ class Ted extends Client
     @Log(this!)
     public registerClass<T extends (new (...args: A[]) => any), A extends any[]>(clazz: T, ...args: A): void
     {
-        const cassth: Record<string, any> = new clazz(args);
-        const methods: string[] = Object.getOwnPropertyNames(cassth.prototype);
+        const clazzInstance: Record<string, any> = new clazz(args);
+        const methods: string[] = Object.getOwnPropertyNames(clazzInstance.prototype);
 
         for(let i: number = 0; i < methods.length; i++)
         {
-            const commandMetadata: RESTPostAPIChatInputApplicationCommandsJSONBody | undefined = Reflect.getMetadata('ted::command', cassth[methods[i]] as (...args: any[]) => any);
+            const commandMetadata: CommandData | undefined = Reflect.getMetadata('ted::command', clazzInstance[methods[i]] as (...args: any[]) => any);
             if(!commandMetadata || typeof commandMetadata === 'undefined')
                 continue; // skip if there isnt any metadata
-            
-            const commandPermissions = Reflect.getMetadata('ted::command:permission', cassth[methods[i]] as (...args: any[]) => any);
-            this.commands.set(commandMetadata.name, { method: cassth[methods[i]], metadata: { command: commandMetadata, permissions: commandPermissions || undefined } });
 
-            if(this.debug)
-            {
-                Logger.getInstance().info(`Registered command ${ commandMetadata.name }`);
-                this.emit('debug', `Registered command ${ commandMetadata.name }`);
-            }
+            const commandPermissions = Reflect.getMetadata('ted::command:permission', clazzInstance[methods[i]] as (...args: any[]) => any);
+            this.commands.set(commandMetadata.name, { method: clazzInstance[methods[i]], metadata: { command: commandMetadata, permissions: commandPermissions || undefined } });
+            this.emit('debug', `Registered command ${ commandMetadata.name }`);
         }
     }
 
@@ -108,10 +113,7 @@ class Ted extends Client
             const path: string = `${ directory }/${ file }`;
 
             if(file.endsWith('.js') || file.endsWith('ts'))
-            {
-                const baseCommand: new () => any = await import(path);
-                this.registerClass(baseCommand);
-            }
+                this.registerClass(await import(path) as new () => any);
             /** Start recursion if the path is a directory and recursive is set to true. */
             else if(lstatSync(path).isDirectory() && recursive)
                 await this.registerPath(path, recursive);

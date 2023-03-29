@@ -22,7 +22,7 @@ type CommandData = RESTPostAPIChatInputApplicationCommandsJSONBody;
  * @param {CommandData} data - The information about the command! 
  * @returns {any}
  */
-function Command(data: RESTPostAPIChatInputApplicationCommandsJSONBody): any
+function Command(data: CommandData): any
 {
     return (target: unknown) => Reflect.defineMetadata(target, 'ted::command', data);
 }

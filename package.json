@@ -1,6 +1,6 @@
 {
   "name": "@turel-bot/ted",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "An amazing framework for an amazing bot, Turel my beloved.",
   "main": "./dist/index.js",
   "scripts": {
@@ -17,9 +17,8 @@
   ],
   "author": "acelikesghosts",
   "license": "Unlicence",
-  "homepage": "https://acelikesghosts.github.io/kyusei",
   "repository": {
-    "url": "https://github.com/acelikesghosts/kyusei",
+    "url": "https://github.com/turel-bot/ted",
     "type": "Git"
   },
   "peerDependencies": {
