@@ -29,7 +29,8 @@ interface TedClientEvents extends ClientEvents
 }
 
 /**
- * @description 
+ * @description Represents a Ted client instance, which is an extended DJS Client.
+ * @see Client
  */
 class Ted extends Client
 {
